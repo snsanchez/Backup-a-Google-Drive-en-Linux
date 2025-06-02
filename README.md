@@ -211,7 +211,7 @@ rm ~/rclone-respaldos.log
 
 | Causa del error                                                                                            | Síntoma                                      | Solución                                               |
 | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
-| **"Attempt X/X failed with errors and: can't update google document type without --drive-import-formats"** | Error al intentar subir un archivo (ver log) | Ignorar el error, no afecta en nada                    |
+| **"Attempt X/X failed with errors and: can't update google document type without --drive-import-formats"** | Error al intentar actualizar un archivo con formato de Google Drive (ver log) | Ignorar el error, no afecta en nada.                    |
 | **Token de Google vencido**                                                                                | Error de autenticación                       | Reconfigurar `rclone` con `rclone config`              |
 | **Ruta mal escrita**                                                                                       | Archivos no se copian                        | Verificar rutas locales y remotas                      |
 | **Permisos insuficientes**                                                                                 | Algunos archivos no se respaldan             | Asegurarse de que el usuario tenga permisos de lectura |
