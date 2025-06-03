@@ -174,6 +174,12 @@ Agregar al final la siguiente línea:
 
 Esto ejecuta el script todos los **viernes a las 22:00**. Podés personalizarlo para el día y hora que quieras.
 
+Si en vez de sólo los viernes quisieras ejecutar el respaldo todos los dias de la semana ingresas:
+
+```
+0 22 * * * /home/tu_usuario/.config/rclone/respaldar.sh
+```
+
 ---
 
 ## Cómo desactivar el respaldo
