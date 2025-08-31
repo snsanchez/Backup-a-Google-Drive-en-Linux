@@ -1,28 +1,48 @@
-# Automatización de backup con Rclone y Google Drive
+# Sincronizacion bidireccional a Google Drive con Rclone en Linux
 
-Este proyecto trata sobre cómo configurar un sistema **de respaldo semanal automático** de una carpeta local (`~/Documentos/misArchivos`) hacia Google Drive (`/misArchivos-backup`), usando [`Rclone`](https://github.com/rclone/rclone) en Linux (base Debian).
+Este proyecto explica cómo configurar un sistema de **respaldo automático + manual** de una carpeta local (`~/Documentos/misArchivos`) hacia Google Drive (`/misArchivos-backup`), usando [`Rclone`](https://github.com/rclone/rclone) en Linux (base Debian).
 
-Una solución estable y automática que protege tu información con un segundo respaldo seguro en la nube, excluyendo archivos no relevantes, con control de conexión y registros de actividad.
+
+Es una solución confiable que te permite:
+
+- Proteger tu información con un **backup seguro** en la nube.
+
+- Tener una **sincronización bidireccional sin sobreescribir archivos**.  
+
+- Subir **solo archivos nuevos o modificados**.
+
+- Ejecutar **manualmente** el respaldo desde un **acceso directo en el escritorio**.
+
+- **Configurable para que corra automáticamente** todos los días a la hora que quieras (por si te olvidas de backupear).
+
+- Ver **notificaciones en el escritorio** con el estado del respaldo.
+
+- Se abre en una terminal para que puedas **monitorear en vivo el proceso** y **poder abortarlo si hace falta**.
+
+- Podes **excluir tipos de archivos**.
+
+- **Registro/Historial de actividad** en un log.
 
 ---
 
 ## Objetivo
 
-- Automatizar un **backup semanal** de archivos personales locales a la nube.
-- Proteger los archivos contra pérdida de datos por fallos físicos, errores humanos o ransomware.
-- Disponer fácilmente de los archivos respaldados desde Google Drive.
-- Evitar olvidarse de respaldar archivos.
+- Automatizar un **backup** de archivos personales locales a la nube.
+- Proteger tus archivos contra pérdida de datos por fallos de sistema o **ransomware**.
+- Permitirte trabajar offline en tu PC o notebook y luego sincronizar todo cuando vuelvas a tener conexión.
+- Evitar olvidarte de respaldar archivos.
 - Subir **solo archivos nuevos o modificados** (backup incremental).
 - (útil para mi caso) **Excluir archivos binarios** (`*.bin`) generados al compilar código.
-- Mantener la **privacidad**: sin sincronización inversa ni borrado, solo se suben archivos, no se modifica la carpeta local.
-- Evitar y manejar errores en caso de no haber conexión a Internet a la hora del respaldo.
+- Mantener la **privacidad**.
+- **Evitar sobreescribir archivos**.
+- Tener varios dispositivos apuntando a la misma nube y garantizar que todos ven los mismos archivos actualizados.
 
 ---
 
 ## Herramientas utilizadas
 
-- `rclone`: para transferencias entre el sistema local y Google Drive.
-- [`cron`](https://ftp.isc.org/isc/cron/): para automatizar la tarea de ejecución semanal.
+- `rclone`: para transferencias de archivos entre tu carpeta local y Google Drive.
+- [`cron`](https://ftp.isc.org/isc/cron/): para automatizar el backup.
 - `Bash` para el script de respaldo.
 
 ---
@@ -49,7 +69,7 @@ rclone config
 
 - (Las demás opciones avanzadas dejalas por defecto apretando enter.)
 
-4. Seguí el proceso de autenticación en el navegador (debería redirigirte, sino copia y pega el link que te da)
+4. Seguí el proceso de autenticación en el navegador (debería redirigirte, sino copiá y pegá el link que te da)
 5. Verificá que se hizo la conexión con:
 
    ```bash
@@ -72,17 +92,16 @@ rclone copy googleDrive:misArchivos googleDrive:misArchivos-backup --update --pr
 
 ### 4. Crear archivo de exclusión
 
-Para mi caso es útil ignorar binarios, pero esto puede aplicarse a otros tipos de archivos
-
 ```bash
 mkdir -p ~/.config/rclone
 nano ~/.config/rclone/rclone-exclude.txt
 ```
 
-Contenido:
+Contenido: en el archivo `rclone-exclude.txt` te dejé muchas exclusiones sobre tipos de datos que suelen ser malware, como los .py o .exe. De esta forma te aseguras no propagar virus al momento de respaldar de local hacia nube o viceversa. 
 
 ```
-*.bin
+*.py
+*.exe
 ```
 
 - Guardar con Ctrl+O
@@ -90,24 +109,9 @@ Contenido:
 
 ---
 
-## Prueba manual
-
-Antes de confiar en la automatización probá ejecutar un sólo respaldo manualmente para ver el funcionamiento:
-
-```bash
-rclone copy /home/tu_usuario/Documentos/misArchivos googleDrive:misArchivos-backup \
-  --update \
-  --copy-links \
-  --exclude-from=/home/tu_usuario/.config/rclone/rclone-exclude.txt \
-  --log-file=/home/tu_usuario/rclone-respaldos.log \
-  --log-level INFO
-```
-
-Verificá los archivos en tu Google Drive y que el log esté creado. Podés ver los errores en el mismo.
-
----
-
 ### 5. Crear script para realizar el respaldo
+
+Como se busca no sobreescribir archivos, por ello no se usa la opcion `rclone sync`, lo que hace es primero bajar a tu carpeta local los archivos nuevos o modificados en drive (drive --> tu carpeta local). Luego, hace lo mismo pero de forma inversa (tu carpeta local --> drive). De esta forma logramos una **sincronización bidireccional sin sobreescribir archivos**. 
 
 Aqui también manejaremos la posibilidad de que cuando se quiera hacer el respaldo no haya internet.
 
@@ -142,17 +146,22 @@ En caso de haber error de conexión, se registrará en el archivo de logs.
 
 ## Explicación de cada parámetro o flag del script
 
-| Flag                 | ¿Qué hace?                                                                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `--update`           | **Solo sube archivos nuevos o modificados** (no sobrescribe innecesariamente)                                                            |
-| `--copy-links`       | Si encuentra **accesos directos** en tu carpeta local, copia el archivo apuntado, no el enlace en sí.                                    |
-| `--exclude-from=...` | Omite los archivos o carpetas listados en el archivo de exclusión                                                                        |
-| `--log-file=...`     | Guarda la salida del comando (mensajes, errores, avisos) en un **archivo de log**.                                                       |
-| `--log-level INFO`   | Establece el **nivel de detalle del log**. Muestra: archivos copiados, ignorados, errores comunes (No muestra mensajes super detallados) |
+| Flag                                    | Descripción                                                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `--update`                              | Copia solo si el archivo de origen es más nuevo que el de destino (evita sobrescribir con versiones antiguas). |
+| `--copy-links`                          | Si encuentra enlaces simbólicos, copia el archivo al que apuntan en lugar del link.                            |
+| `--create-empty-src-dirs`               | Mantiene la estructura de directorios aunque estén vacíos.                                                     |
+| `--exclude-from="$EXCLUDE_FILE"`        | Excluye los archivos/carpetas listados en el archivo indicado.                                                 |
+| `--drive-import-formats docx,xlsx,pptx` | Si subís archivos de esos formatos, Google los convierte a Google Docs/Sheets/Slides automáticamente (evita errores).          |
+| `--progress`                            | Muestra el progreso en la terminal en tiempo real.                                                             |
+| `--log-file="$LOG_FILE"`                | Guarda un registro de la ejecución en el archivo de log.                                                       |
+| `--log-level INFO`                      | Define el nivel de detalle de los logs (INFO es balanceado entre detalle y brevedad).                          |
+
 
 ---
 
-Hacerlo ejecutable:
+
+Dale permisos para hacerlo ejecutable:
 
 ```bash
 chmod +x ~/.config/rclone/respaldar.sh
@@ -160,7 +169,27 @@ chmod +x ~/.config/rclone/respaldar.sh
 
 ---
 
-### 6. Agregar tarea cron
+### 6. Crear acceso directo en el escritorio
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Respaldar Ahora
+Comment=Ejecutar respaldo de mi carpeta /uni a Google Drive
+Exec=gnome-terminal -- bash -c "/home/santu/.config/rclone/respaldar.sh"
+Icon=utilities-terminal
+Terminal=false
+```
+
+Dale permisos para hacerlo ejecutable:
+
+```bash
+chmod +x ~/Escritorio/respaldar.desktop
+```
+
+---
+
+### 7. Agregar automatización para el backup diario con Cron
 
 ```bash
 crontab -e
@@ -169,16 +198,10 @@ crontab -e
 Agregar al final la siguiente línea:
 
 ```
-0 22 * * 5 /home/tu_usuario/.config/rclone/respaldar.sh
+0 23 * * * /home/tu_usuario/.config/rclone/respaldar.sh
 ```
 
-Esto ejecuta el script todos los **viernes a las 22:00**. Podés personalizarlo para el día y hora que quieras.
-
-Si en vez de sólo los viernes quisieras ejecutar el respaldo todos los dias de la semana ingresas:
-
-```
-0 22 * * * /home/tu_usuario/.config/rclone/respaldar.sh
-```
+Esto ejecuta el script **todos los días a las 23:00**. Podés personalizarlo para el día y hora que quieras.
 
 ---
 
@@ -215,14 +238,14 @@ rm ~/rclone-respaldos.log
 
 ## Posibles errores y cómo resolverlos
 
-| Causa del error                                                                                            | Síntoma                                      | Solución                                               |
-| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
-| **"Attempt X/X failed with errors and: can't update google document type without --drive-import-formats"** | Error al intentar actualizar un archivo con formato de Google Drive (ver log) | Ignorar el error, no afecta en nada.                    |
-| **Token de Google vencido**                                                                                | Error de autenticación                       | Reconfigurar `rclone` con `rclone config`              |
-| **Ruta mal escrita**                                                                                       | Archivos no se copian                        | Verificar rutas locales y remotas                      |
-| **Permisos insuficientes**                                                                                 | Algunos archivos no se respaldan             | Asegurarse de que el usuario tenga permisos de lectura |
-| **Usar `sync` en lugar de `copy`**                                                                         | Posible borrado de archivos en Drive         | Usar `copy` con `--update` y no `sync`                 |
-| **Cambios en la API de Google**                                                                            | Falla inesperada                             | Actualizar `rclone` a la última versión                |
+| Causa del error                                                                                            | Síntoma                                                                      | Solución                                                         |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **"Attempt X/X failed with errors and: can't update google document type without --drive-import-formats"** | Error al intentar copiar/actualizar archivos de Google Docs, Sheets o Slides | Ignorar el error, no afecta al respaldo.                         |
+| **Token de Google vencido**                                                                                | Error de autenticación                                                       | Reconfigurar `rclone` con `rclone config`                        |
+| **Ruta mal escrita**                                                                                       | Archivos no se copian                                                        | Verificar que las rutas locales y remotas estén bien             |
+| **Permisos insuficientes**                                                                                 | Algunos archivos no se respaldan                                             | Asegurarse de que el usuario tenga permisos de lectura/escritura |
+| **Usar `sync` en lugar de `copy`**                                                                         | Posible borrado de archivos en Drive                                         | Usar siempre `copy` con `--update`, no `sync`                    |
+| **Cambios en la API de Google**                                                                            | Falla inesperada                                                             | Actualizar `rclone` a la última versión                          |
 
 ---
 
@@ -231,7 +254,7 @@ rm ~/rclone-respaldos.log
 - Rclone **no permite acceso de Google a tus archivos locales**.
 - Solo se suben archivos de la carpeta especificada.
 - Tus credenciales (token de autenticación) se almacenan localmente en `~/.config/rclone/rclone.conf` y solo se acceden con root.
-- No hay sincronización inversa desde Drive.
+- El script hace copia en ambos sentidos (Drive → local y local → Drive), pero nunca elimina archivos.
 
 ---
 
@@ -243,10 +266,16 @@ rm ~/rclone-respaldos.log
 cat ~/rclone-respaldos.log
 ```
 
-- Ver archivos remotos:
+- Listar archivos remotos:
 
 ```bash
 rclone ls googleDrive:misArchivos-backup
+```
+
+- Probar conexión y configuración de rclone:
+
+```bash
+rclone lsd googleDrive:
 ```
 
 ---
