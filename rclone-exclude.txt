@@ -1,1 +1,58 @@
+# Archivos ejecutables (evitar scripts maliciosos)
+*.exe
+*.bat
+*.cmd
+*.sh
+*.py
+*.js
+*.vbs
+*.o
 *.bin
+
+# Archivos temporales o de configuración sensibles
+*.tmp
+*.temp
+*.log
+*.conf
+*.cfg
+*.ini
+*.env
+
+# Archivos de macros (pueden contener malware)
+*.docm
+*.xlsm
+*.pptm
+
+# Archivos comprimidos (pueden ocultar malware)
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tar.bz2
+
+# Archivos de bases de datos (pueden contener credenciales)
+*.db
+*.sqlite
+*.sql
+
+# Archivos de configuración de sistemas
+*.ssh/
+*.pgp
+*.gpg
+*.key
+
+# Archivos de escritorio remoto (riesgo de acceso)
+*.rdp
+*.vnc
+
+# Archivos de plantillas (pueden ejecutar código)
+*.dotm
+*.xltm
+*.potm
+
+# Directorios ocultos (como .git, .config, etc.)
+.git/
+.__*
+.DS_Store
+*.swp
+*.bak
