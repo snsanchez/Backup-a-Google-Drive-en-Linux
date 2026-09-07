@@ -229,7 +229,7 @@ chmod +x ~/.config/rclone/respaldar.sh
 Type=Application
 Name=Respaldar Ahora
 Comment=Ejecutar respaldo de mi carpeta /uni a Google Drive
-Exec=gnome-terminal -- bash -c "/home/santu/.config/rclone/respaldar.sh"
+Exec=gnome-terminal -- bash -c "/home/tu_usuario/.config/rclone/respaldar.sh"
 Icon=utilities-terminal
 Terminal=false
 ```
